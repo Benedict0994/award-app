@@ -1,43 +1,95 @@
-import { Request, Response } from "express";
+import { Response } from "express";
 import fs from "fs";
 import path from "path";
 import Candidate from "../models/Candidate";
 import Settings from "../models/Settings";
+import type { AuthRequest } from "../middleware/authMiddleware";
 import { generateSlug } from "../utils/generateSlug";
 
-export async function getCandidates(_req: Request, res: Response) {
+function getSingleString(value: unknown): string | null {
+  if (typeof value === "string" && value.trim()) {
+    return value.trim();
+  }
+
+  if (
+    Array.isArray(value) &&
+    value.length > 0 &&
+    typeof value[0] === "string" &&
+    value[0].trim()
+  ) {
+    return value[0].trim();
+  }
+
+  return null;
+}
+
+export async function getCandidates(req: AuthRequest, res: Response) {
   try {
-    const candidates = await Candidate.find().sort({ createdAt: -1 });
-    res.json(candidates);
-  } catch {
-    res.status(500).json({ message: "Failed to fetch candidates" });
+    if (!req.user?.awardSpace) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const candidates = await Candidate.find({
+      awardSpace: req.user.awardSpace,
+    }).sort({ createdAt: -1 });
+
+    return res.json(candidates);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: "Failed to fetch candidates" });
   }
 }
 
-export async function getCandidateById(req: Request, res: Response) {
+export async function getCandidateById(req: AuthRequest, res: Response) {
   try {
-    const { id } = req.params;
-    const candidate = await Candidate.findById(id);
+    if (!req.user?.awardSpace) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const idParam = getSingleString(req.params.id);
+
+    if (!idParam) {
+      return res.status(400).json({ message: "Invalid candidate id" });
+    }
+
+    const candidate = await Candidate.findOne({
+      _id: idParam,
+      awardSpace: req.user.awardSpace,
+    });
 
     if (!candidate) {
       return res.status(404).json({ message: "Candidate not found" });
     }
 
-    res.json(candidate);
-  } catch {
-    res.status(500).json({ message: "Failed to fetch candidate" });
+    return res.json(candidate);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: "Failed to fetch candidate" });
   }
 }
 
-export async function createCandidate(req: Request, res: Response) {
+export async function createCandidate(req: AuthRequest, res: Response) {
   try {
-    const { name, category, department, bio } = req.body;
+    if (!req.user?.awardSpace) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const name = getSingleString(req.body.name);
+    const category = getSingleString(req.body.category);
+    const department = getSingleString(req.body.department);
+    const bio = getSingleString(req.body.bio) || "";
+
+    if (!name || !category || !department) {
+      return res
+        .status(400)
+        .json({ message: "Name, category, and department are required" });
+    }
 
     if (!req.file) {
       return res.status(400).json({ message: "Candidate image is required" });
     }
 
-    const slug = generateSlug(name + "-" + Date.now());
+    const slug = generateSlug(`${name}-${Date.now()}`);
 
     const candidate = await Candidate.create({
       name,
@@ -53,29 +105,47 @@ export async function createCandidate(req: Request, res: Response) {
           votes: 0,
         },
       ],
+      awardSpace: req.user.awardSpace,
     });
 
-    res.status(201).json(candidate);
-  } catch {
-    res.status(500).json({ message: "Failed to create candidate" });
+    return res.status(201).json(candidate);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: "Failed to create candidate" });
   }
 }
 
-export async function updateCandidate(req: Request, res: Response) {
+export async function updateCandidate(req: AuthRequest, res: Response) {
   try {
-    const { id } = req.params;
-    const { name, category, department, bio, votes } = req.body;
+    if (!req.user?.awardSpace) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
 
-    const candidate = await Candidate.findById(id);
+    const idParam = getSingleString(req.params.id);
+
+    if (!idParam) {
+      return res.status(400).json({ message: "Invalid candidate id" });
+    }
+
+    const candidate = await Candidate.findOne({
+      _id: idParam,
+      awardSpace: req.user.awardSpace,
+    });
 
     if (!candidate) {
       return res.status(404).json({ message: "Candidate not found" });
     }
 
+    const name = getSingleString(req.body.name);
+    const category = getSingleString(req.body.category);
+    const department = getSingleString(req.body.department);
+    const bio = getSingleString(req.body.bio);
+    const votesRaw = getSingleString(req.body.votes);
+
     candidate.name = name ?? candidate.name;
     candidate.category = category ?? candidate.category;
     candidate.department = department ?? candidate.department;
-    candidate.bio = bio ?? candidate.bio;
+    candidate.bio = bio ?? candidate.bio ?? "";
 
     if (req.file) {
       if (candidate.image) {
@@ -89,26 +159,46 @@ export async function updateCandidate(req: Request, res: Response) {
       candidate.image = `/uploads/${req.file.filename}`;
     }
 
-    if (typeof votes === "number" && votes !== candidate.votes) {
-      candidate.votes = votes;
+    const parsedVotes =
+      votesRaw !== null && votesRaw !== "" ? Number(votesRaw) : undefined;
+
+    if (
+      typeof parsedVotes === "number" &&
+      !Number.isNaN(parsedVotes) &&
+      parsedVotes !== candidate.votes
+    ) {
+      candidate.votes = parsedVotes;
       candidate.voteHistory.push({
         date: new Date().toISOString(),
-        votes,
+        votes: parsedVotes,
       });
     }
 
     await candidate.save();
-    res.json(candidate);
-  } catch {
-    res.status(500).json({ message: "Failed to update candidate" });
+
+    return res.json(candidate);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: "Failed to update candidate" });
   }
 }
 
-export async function deleteCandidate(req: Request, res: Response) {
+export async function deleteCandidate(req: AuthRequest, res: Response) {
   try {
-    const { id } = req.params;
+    if (!req.user?.awardSpace) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
 
-    const candidate = await Candidate.findById(id);
+    const idParam = getSingleString(req.params.id);
+
+    if (!idParam) {
+      return res.status(400).json({ message: "Invalid candidate id" });
+    }
+
+    const candidate = await Candidate.findOne({
+      _id: idParam,
+      awardSpace: req.user.awardSpace,
+    });
 
     if (!candidate) {
       return res.status(404).json({ message: "Candidate not found" });
@@ -122,33 +212,47 @@ export async function deleteCandidate(req: Request, res: Response) {
       }
     }
 
-    await Candidate.findByIdAndDelete(id);
+    await Candidate.deleteOne({
+      _id: idParam,
+      awardSpace: req.user.awardSpace,
+    });
 
-    res.json({ message: "Candidate deleted successfully" });
-  } catch {
-    res.status(500).json({ message: "Failed to delete candidate" });
+    return res.json({ message: "Candidate deleted successfully" });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: "Failed to delete candidate" });
   }
 }
 
-export async function getCandidateBySlug(req: Request, res: Response) {
+export async function getCandidateBySlug(req: AuthRequest, res: Response) {
   try {
-    const slugparam = req.params.slug;
-    if (typeof slugparam !== "string" || !slugparam.trim()) {
+    const slugParam = getSingleString(req.params.slug);
+
+    if (!slugParam) {
       return res.status(400).json({ message: "Invalid candidate slug" });
     }
-    const candidate = await Candidate.findOne({ slug: slugparam });
+
+    const candidate = await Candidate.findOne({ slug: slugParam });
 
     if (!candidate) {
       return res.status(404).json({ message: "Candidate not found" });
     }
 
-    const settings = await Settings.findOne();
+    const settings = await Settings.findOne({
+      awardSpace: candidate.awardSpace,
+    });
+    const categoryCanidates = await Candidate.find({
+      awardSpace: candidate.awardSpace,
+      category: candidate.category,
+    }).sort({ votes: -1, createdAt: 1 });
 
-    res.json({
+    return res.json({
       candidate,
       settings,
+      categoryCanidates,
     });
-  } catch {
-    res.status(500).json({ message: "Failed to fetch candidate" });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: "Failed to fetch candidate" });
   }
 }

@@ -6,14 +6,38 @@ export default function Profile() {
 
   return (
     <DashboardLayout>
-      <div className="max-w-xl rounded-2xl bg-white p-6 shadow">
-        <h1 className="text-3xl font-bold mb-4">Profile</h1>
-        <p>
-          <strong>Name:</strong> {user?.name}
-        </p>
-        <p>
-          <strong>Email:</strong> {user?.email}
-        </p>
+      <div className="mx-auto max-w-3xl rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
+        <h1 className="text-3xl font-bold text-slate-900">Profile</h1>
+        <p className="mt-6 text-sm text-slate-500">Admin account details</p>
+
+        <div className="mt-8 space-y-4">
+          <div className="rounded-2xl bg-slate-50 p-4">
+            <p className="text-xs uppercase tracking-wide text-slate-400">
+              Name
+            </p>
+            <p className="mt-2 text-lg font-semibold text-slate-900">
+              {user?.name || "N/A"}
+            </p>
+          </div>
+
+          <div className="rounded-2xl bg-slate-50 p-4">
+            <p className="text-xs uppercase tracking-wide text-slate-400">
+              Email
+            </p>
+            <p className="mt-2 text-lg font-semibold text-slate-900">
+              {user?.email || "N/A"}
+            </p>
+          </div>
+
+          <div className="rounded-2xl bg-slate-50 p-4">
+            <p className="text-xs uppercase tracking-wide text-slate-400">
+              Award Space
+            </p>
+            <p className="mt-2 text-lg font-semibold text-slate-900">
+              {user?.awardSpace || "N/A"}
+            </p>
+          </div>
+        </div>
       </div>
     </DashboardLayout>
   );

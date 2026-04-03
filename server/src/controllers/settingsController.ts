@@ -1,40 +1,67 @@
-import { Request, Response } from "express";
+import { Response } from "express";
 import Settings from "../models/Settings";
+import type { AuthRequest } from "../middleware/authMiddleware";
 
-export async function getSettings(req: Request, res: Response) {
-  let settings = await Settings.findOne();
+export async function getSettings(req: AuthRequest, res: Response) {
+  try {
+    if (!req.user?.awardSpace) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
 
-  if (!settings) {
-    settings = await Settings.create({
-      votingStart: null,
-      votingEnd: null,
-      candidateCanViewVotes: true,
+    let settings = await Settings.findOne({
+      awardSpace: req.user.awardSpace,
     });
-  }
 
-  res.json(settings);
+    if (!settings) {
+      settings = await Settings.create({
+        awardSpace: req.user.awardSpace,
+        votingStart: null,
+        votingEnd: null,
+        candidateCanViewVotes: true,
+      });
+    }
+
+    res.json(settings);
+  } catch {
+    res.status(500).json({ message: "Failed to fetch settings" });
+  }
 }
 
-export async function updateSettings(req: Request, res: Response) {
-  const { votingStart, votingEnd, candidateCanViewVotes } = req.body;
+export async function updateSettings(req: AuthRequest, res: Response) {
+  try {
+    if (!req.user?.awardSpace) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
 
-  let settings = await Settings.findOne();
+    const { votingStart, votingEnd, candidateCanViewVotes } = req.body;
 
-  if (!settings) {
-    settings = await Settings.create({
-      votingStart: votingStart ?? null,
-      votingEnd: votingEnd ?? null,
-      candidateCanViewVotes: candidateCanViewVotes ?? true,
+    let settings = await Settings.findOne({
+      awardSpace: req.user.awardSpace,
     });
-  } else {
-    settings.votingStart = votingStart ?? settings.votingStart;
-    settings.votingEnd = votingEnd ?? settings.votingEnd;
+
+    if (!settings) {
+      settings = await Settings.create({
+        awardSpace: req.user.awardSpace,
+        votingStart: votingStart ?? null,
+        votingEnd: votingEnd ?? null,
+        candidateCanViewVotes:
+          candidateCanViewVotes !== undefined ? candidateCanViewVotes : true,
+      });
+
+      return res.json(settings);
+    }
+
+    settings.votingStart = votingStart ?? null;
+    settings.votingEnd = votingEnd ?? null;
+
     if (typeof candidateCanViewVotes === "boolean") {
       settings.candidateCanViewVotes = candidateCanViewVotes;
     }
 
     await settings.save();
-  }
 
-  res.json(settings);
+    res.json(settings);
+  } catch {
+    res.status(500).json({ message: "Failed to update settings" });
+  }
 }

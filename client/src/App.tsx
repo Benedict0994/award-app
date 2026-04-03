@@ -1,19 +1,35 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import type { ReactNode } from "react";
+import useAuth from "./context/useAuth";
+
 import Login from "./pages/Login";
+import Signup from "./pages/Signup";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
+
 import Dashboard from "./pages/Dashboard";
 import Candidates from "./pages/Candidates";
 import AddCandidate from "./pages/AddCandidate";
 import EditCandidate from "./pages/EditCandidate";
-import Profile from "./pages/Profile";
 import Settings from "./pages/Settings";
+import Profile from "./pages/Profile";
 import CandidatePublicView from "./pages/CandidatePublicView";
-import useAuth from "./context/useAuth";
 
-function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { token } = useAuth();
+function ProtectedRoute({ children }: { children: ReactNode }) {
+  const { isAuthenticated } = useAuth();
 
-  if (!token) {
+  if (!isAuthenticated) {
     return <Navigate to="/" replace />;
+  }
+
+  return children;
+}
+
+function PublicOnlyRoute({ children }: { children: ReactNode }) {
+  const { isAuthenticated } = useAuth();
+
+  if (isAuthenticated) {
+    return <Navigate to="/dashboard" replace />;
   }
 
   return children;
@@ -23,7 +39,41 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<Login />} />
+        <Route
+          path="/"
+          element={
+            <PublicOnlyRoute>
+              <Login />
+            </PublicOnlyRoute>
+          }
+        />
+
+        <Route
+          path="/signup"
+          element={
+            <PublicOnlyRoute>
+              <Signup />
+            </PublicOnlyRoute>
+          }
+        />
+
+        <Route
+          path="/forgot-password"
+          element={
+            <PublicOnlyRoute>
+              <ForgotPassword />
+            </PublicOnlyRoute>
+          }
+        />
+
+        <Route
+          path="/reset-password/:token"
+          element={
+            <PublicOnlyRoute>
+              <ResetPassword />
+            </PublicOnlyRoute>
+          }
+        />
 
         <Route
           path="/dashboard"

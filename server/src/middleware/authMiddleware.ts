@@ -4,8 +4,10 @@ import { env } from "../config/env";
 
 export interface AuthRequest extends Request {
   user?: {
+    id: string;
     email: string;
     name: string;
+    awardSpace: string;
   };
 }
 
@@ -23,22 +25,18 @@ export function protect(req: AuthRequest, res: Response, next: NextFunction) {
   }
 
   try {
-    const decoded = jwt.verify(token, env.JWT_SECRET) as unknown;
-
-    if (
-      typeof decoded !== "object" ||
-      decoded === null ||
-      !("email" in decoded) ||
-      !("name" in decoded) ||
-      typeof decoded.email !== "string" ||
-      typeof decoded.name !== "string"
-    ) {
-      return res.status(401).json({ message: "Invalid token payload" });
-    }
+    const decoded = jwt.verify(token, env.JWT_SECRET) as {
+      id: string;
+      email: string;
+      name: string;
+      awardSpace: string;
+    };
 
     req.user = {
+      id: decoded.id,
       email: decoded.email,
       name: decoded.name,
+      awardSpace: decoded.awardSpace,
     };
 
     next();

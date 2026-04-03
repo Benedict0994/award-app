@@ -18,7 +18,7 @@ export interface Candidate {
 }
 
 export interface Settings {
-  _id: string;
+  _id?: string;
   votingStart: string | null;
   votingEnd: string | null;
   candidateCanViewVotes: boolean;
@@ -27,4 +27,6 @@ export interface Settings {
 export interface User {
   name: string;
   email: string;
+  id: string;
+  awardSpace: string;
 }

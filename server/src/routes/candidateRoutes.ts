@@ -12,7 +12,10 @@ import { upload } from "../middleware/uploadMiddleware";
 
 const router = Router();
 
+// 🔓 Public route (no auth)
 router.get("/public/:slug", getCandidateBySlug);
+
+// 🔒 Protected routes
 router.get("/", protect, getCandidates);
 router.get("/:id", protect, getCandidateById);
 router.post("/", protect, upload.single("image"), createCandidate);

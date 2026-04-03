@@ -1,4 +1,4 @@
-import mongoose, { Schema, Document } from "mongoose";
+import mongoose, { Schema, Document, Types } from "mongoose";
 
 export interface IVoteHistory {
   date: string;
@@ -14,6 +14,7 @@ export interface ICandidate extends Document {
   slug: string;
   bio?: string;
   voteHistory: IVoteHistory[];
+  awardSpace: Types.ObjectId;
 }
 
 const voteHistorySchema = new Schema<IVoteHistory>(
@@ -21,7 +22,7 @@ const voteHistorySchema = new Schema<IVoteHistory>(
     date: { type: String, required: true },
     votes: { type: Number, required: true, default: 0 },
   },
-  { _id: false },
+  { _id: false }
 );
 
 const candidateSchema = new Schema<ICandidate>(
@@ -32,10 +33,15 @@ const candidateSchema = new Schema<ICandidate>(
     department: { type: String, required: true },
     votes: { type: Number, default: 0 },
     slug: { type: String, required: true, unique: true },
-    bio: { type: String },
+    bio: { type: String, default: "" },
     voteHistory: { type: [voteHistorySchema], default: [] },
+    awardSpace: {
+      type: Schema.Types.ObjectId,
+      ref: "AwardSpace",
+      required: true,
+    },
   },
-  { timestamps: true },
+  { timestamps: true }
 );
 
 export default mongoose.model<ICandidate>("Candidate", candidateSchema);
