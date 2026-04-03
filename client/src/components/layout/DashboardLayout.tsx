@@ -1,7 +1,10 @@
 import { useState } from "react";
 import type { ReactNode } from "react";
-import Sidebar from "./Sidebar";
 import { Menu } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import Sidebar from "./Sidebar";
+import DashboardHeader from "./DashboardHeader";
 
 interface Props {
   children: ReactNode;
@@ -11,24 +14,32 @@ export default function DashboardLayout({ children }: Props) {
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-slate-100">
-      {/* Top bar */}
-      <header className="flex items-center justify-between bg-white p-4 shadow">
-        <button
-          onClick={() => setOpen(true)}
-          className="rounded-lg p-2 hover:bg-slate-100"
-        >
-          <Menu size={24} />
-        </button>
+    <div className="min-h-screen bg-muted/30">
+      {/* Desktop sidebar */}
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 border-r bg-sidebar lg:block">
+        <Sidebar />
+      </aside>
 
-        <h1 className="text-xl font-bold">Voting System</h1>
-      </header>
+      {/* Mobile sidebar */}
+      <Sheet open={open} onOpenChange={setOpen}>
+        <div className="flex h-14 items-center border-b bg-background px-4 lg:hidden">
+          <SheetTrigger render={<Button variant="ghost" size="icon" />}>
+            <Menu size={20} />
+          </SheetTrigger>
+          <span className="ml-3 text-sm font-semibold">AwardVote</span>
+        </div>
+        <SheetContent side="left" className="w-64 p-0">
+          <Sidebar onNavigate={() => setOpen(false)} />
+        </SheetContent>
+      </Sheet>
 
-      {/* Sidebar */}
-      <Sidebar open={open} setOpen={setOpen} />
-
-      {/* Page content */}
-      <main className="p-6">{children}</main>
+      {/* Main content */}
+      <div className="lg:pl-64">
+        <div className="hidden lg:block">
+          <DashboardHeader />
+        </div>
+        <main className="p-4 sm:p-6">{children}</main>
+      </div>
     </div>
   );
 }

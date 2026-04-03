@@ -1,7 +1,18 @@
 import { useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
+import { LockKeyhole, ArrowLeft } from "lucide-react";
 import toast from "react-hot-toast";
 import API from "../services/api";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
 export default function ResetPassword() {
   const { token } = useParams();
@@ -17,7 +28,7 @@ export default function ResetPassword() {
     try {
       await API.post(`/auth/reset-password/${token}`, { password });
       toast.success("Password reset successful");
-      navigate("/");
+      navigate("/login");
     } catch (error) {
       console.error(error);
       toast.error("Failed to reset password");
@@ -27,30 +38,49 @@ export default function ResetPassword() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-100 px-4">
-      <div className="w-full max-w-md rounded-3xl bg-white p-8 shadow-xl">
-        <h1 className="text-3xl font-bold text-slate-900">Reset Password</h1>
-        <p className="mt-2 text-sm text-slate-500">
-          Enter a new password for your admin account.
-        </p>
+    <div className="flex min-h-screen items-center justify-center bg-muted/30 px-4">
+      <div className="w-full max-w-md">
+        <Card className="shadow-lg">
+          <CardHeader className="text-center">
+            <CardTitle className="text-2xl">Reset Password</CardTitle>
+            <CardDescription>
+              Enter a new password for your admin account.
+            </CardDescription>
+          </CardHeader>
 
-        <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-          <input
-            type="password"
-            placeholder="New password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-full rounded-2xl border px-4 py-3"
-          />
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="password">New Password</Label>
+                <div className="relative">
+                  <LockKeyhole
+                    size={16}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                  />
+                  <Input
+                    id="password"
+                    type="password"
+                    placeholder="Enter new password"
+                    className="pl-9"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                  />
+                </div>
+              </div>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full rounded-2xl bg-blue-600 py-3 font-semibold text-white hover:bg-blue-700"
-          >
-            {loading ? "Resetting..." : "Reset Password"}
-          </button>
-        </form>
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? "Resetting..." : "Reset Password"}
+              </Button>
+            </form>
+
+            <div className="mt-6 text-center">
+              <Button variant="ghost" size="sm" render={<Link to="/login" />}>
+                <ArrowLeft size={14} className="mr-2" />
+                Back to login
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

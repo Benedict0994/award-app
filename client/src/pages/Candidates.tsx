@@ -1,14 +1,28 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { ExternalLink, Pencil, Trash2 } from "lucide-react";
+import toast from "react-hot-toast";
 import DashboardLayout from "../components/layout/DashboardLayout";
 import API from "../services/api";
 import type { Candidate } from "../types";
 import { getImageUrl } from "../utils/getImageUrl";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 export default function Candidates() {
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   async function fetchCandidates() {
     try {
@@ -16,7 +30,7 @@ export default function Candidates() {
       setCandidates(res.data);
     } catch (error) {
       console.error(error);
-      alert("Failed to fetch candidates");
+      toast.error("Failed to fetch candidates");
     } finally {
       setLoading(false);
     }
@@ -26,165 +40,183 @@ export default function Candidates() {
     fetchCandidates();
   }, []);
 
-  async function handleDelete(id: string) {
-    const confirmed = window.confirm(
-      "Are you sure you want to delete this candidate?",
-    );
-
-    if (!confirmed) return;
+  async function handleDelete() {
+    if (!deleteId) return;
+    setDeleting(true);
 
     try {
-      await API.delete(`/candidates/${id}`);
-      setCandidates((prev) => prev.filter((candidate) => candidate._id !== id));
-      alert("Candidate deleted successfully");
+      await API.delete(`/candidates/${deleteId}`);
+      setCandidates((prev) => prev.filter((c) => c._id !== deleteId));
+      toast.success("Candidate deleted successfully");
     } catch (error) {
       console.error(error);
-      alert("Failed to delete candidate");
+      toast.error("Failed to delete candidate");
+    } finally {
+      setDeleting(false);
+      setDeleteId(null);
     }
   }
 
-  const totalVotes = candidates.reduce(
-    (sum, candidate) => sum + candidate.votes,
-    0,
-  );
+  const totalVotes = candidates.reduce((sum, c) => sum + c.votes, 0);
 
   return (
     <DashboardLayout>
-      <div className="mx-auto max-w-7xl">
-        <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="mx-auto max-w-7xl space-y-6">
+        {/* Header */}
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight text-slate-900">
-              Candidates
-            </h1>
-            <p className="mt-1 text-sm text-slate-500">
+            <h1 className="text-3xl font-semibold tracking-tight">Candidates</h1>
+            <p className="mt-1 text-sm text-muted-foreground">
               Manage nominees, review profiles, and track vote activity.
             </p>
           </div>
-
-          <Link
-            to="/candidates/add"
-            className="inline-flex items-center justify-center rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"
-          >
+          <Button render={<Link to="/candidates/add" />}>
             Add Candidate
-          </Link>
+          </Button>
         </div>
 
-        <div className="mb-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <p className="text-sm font-medium text-slate-500">
-              Total Candidates
-            </p>
-            <h2 className="mt-2 text-3xl font-bold text-slate-900">
-              {candidates.length}
-            </h2>
-          </div>
-
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <p className="text-sm font-medium text-slate-500">Total Votes</p>
-            <h2 className="mt-2 text-3xl font-bold text-slate-900">
-              {totalVotes}
-            </h2>
-          </div>
-
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <p className="text-sm font-medium text-slate-500">Status</p>
-            <h2 className="mt-2 text-3xl font-bold text-slate-900">
-              Active List
-            </h2>
-          </div>
+        {/* Stats */}
+        <div className="grid gap-4 sm:grid-cols-3">
+          <Card>
+            <CardContent className="p-5">
+              <p className="text-sm font-medium text-muted-foreground">
+                Total Candidates
+              </p>
+              <p className="mt-1 text-3xl font-semibold">{candidates.length}</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-5">
+              <p className="text-sm font-medium text-muted-foreground">
+                Total Votes
+              </p>
+              <p className="mt-1 text-3xl font-semibold">{totalVotes}</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-5">
+              <p className="text-sm font-medium text-muted-foreground">
+                Status
+              </p>
+              <p className="mt-1 text-3xl font-semibold">Active List</p>
+            </CardContent>
+          </Card>
         </div>
 
+        {/* Candidate list */}
         {loading ? (
-          <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
-            <p className="text-slate-600">Loading candidates...</p>
-          </div>
+          <Card>
+            <CardContent className="p-8 text-center text-muted-foreground">
+              Loading candidates...
+            </CardContent>
+          </Card>
         ) : candidates.length === 0 ? (
-          <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
-            <h2 className="text-xl font-semibold text-slate-900">
-              No candidates yet
-            </h2>
-            <p className="mt-2 text-sm text-slate-500">
-              Start by adding your first candidate to the voting system.
-            </p>
-
-            <Link
-              to="/candidates/add"
-              className="mt-5 inline-flex rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-700"
-            >
-              Add Candidate
-            </Link>
-          </div>
+          <Card>
+            <CardContent className="p-8 text-center">
+              <h2 className="text-xl font-semibold">No candidates yet</h2>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Start by adding your first candidate to the voting system.
+              </p>
+              <Button className="mt-5" render={<Link to="/candidates/add" />}>
+                Add Candidate
+              </Button>
+            </CardContent>
+          </Card>
         ) : (
           <div className="grid gap-6 sm:grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
             {candidates.map((candidate) => (
-              <div
+              <Card
                 key={candidate._id}
-                className="group overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-xl"
+                className="group overflow-hidden transition-shadow hover:shadow-md"
               >
-                <div className="relative h-56 w-full overflow-hidden bg-slate-100">
+                <div className="relative h-56 w-full overflow-hidden bg-muted">
                   <img
                     src={getImageUrl(candidate.image)}
                     alt={candidate.name}
                     className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
                   />
-
-                  <div className="absolute left-4 top-4 rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-slate-700 shadow">
+                  <Badge className="absolute left-3 top-3" variant="secondary">
                     {candidate.category}
-                  </div>
+                  </Badge>
                 </div>
 
-                <div className="space-y-4 p-5">
+                <CardContent className="space-y-4 p-5">
                   <div>
-                    <h2 className="text-xl font-bold tracking-tight text-slate-900">
+                    <h2 className="text-lg font-semibold tracking-tight">
                       {candidate.name}
                     </h2>
-                    <p className="mt-1 text-sm text-slate-500">
+                    <p className="mt-1 text-sm text-muted-foreground">
                       {candidate.department}
                     </p>
                   </div>
 
-                  <div className="flex items-center justify-between rounded-xl bg-slate-50 px-4 py-3">
+                  <div className="flex items-center justify-between rounded-lg bg-muted px-4 py-3">
                     <div>
-                      <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                         Votes
                       </p>
-                      <p className="text-lg font-bold text-slate-900">
-                        {candidate.votes}
-                      </p>
+                      <p className="text-lg font-semibold">{candidate.votes}</p>
                     </div>
-
                     <Link
                       to={`/candidate-view/${candidate.slug}`}
-                      className="inline-lfex items-center gap-2 text-sm font-medium text-blue-600 transition hover:text-blue-700"
+                      className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
                     >
-                      <ExternalLink size={16} />
-                      Candidate View
+                      <ExternalLink size={14} />
+                      View
                     </Link>
                   </div>
 
                   <div className="flex gap-3">
-                    <Link
-                      to={`/candidates/edit/${candidate._id}`}
-                      className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-amber-500 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-amber-600"
+                    <Button
+                      variant="outline"
+                      className="flex-1"
+                      size="sm"
+                      render={<Link to={`/candidates/edit/${candidate._id}`} />}
                     >
-                      <Pencil size={16} />
+                      <Pencil size={14} className="mr-1" />
                       Edit
-                    </Link>
-
-                    <button
-                      onClick={() => handleDelete(candidate._id)}
-                      className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-red-500 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-red-600"
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      className="flex-1"
+                      size="sm"
+                      onClick={() => setDeleteId(candidate._id)}
                     >
-                      <Trash2 size={16} />
+                      <Trash2 size={14} className="mr-1" />
                       Delete
-                    </button>
+                    </Button>
                   </div>
-                </div>
-              </div>
+                </CardContent>
+              </Card>
             ))}
           </div>
         )}
       </div>
+
+      {/* Delete dialog */}
+      <Dialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Candidate</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this candidate? This action cannot
+              be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteId(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDelete}
+              disabled={deleting}
+            >
+              {deleting ? "Deleting..." : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 }

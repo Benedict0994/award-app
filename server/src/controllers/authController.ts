@@ -36,6 +36,7 @@ export async function signup(req: Request, res: Response) {
     }
 
     const existingAdmin = await Admin.findOne({ email });
+    console.log(existingAdmin)
 
     if (existingAdmin) {
       return res.status(400).json({ message: "Admin already exists" });
@@ -67,6 +68,10 @@ export async function signup(req: Request, res: Response) {
       isVerified: true,
       awardSpace: awardSpace._id,
     });
+
+    console.log("admin", admin
+
+    )
 
     const token = generateToken({
       id: String(admin._id),

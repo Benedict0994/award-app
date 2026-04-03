@@ -4,6 +4,14 @@ import API from "../services/api";
 import type { Candidate, Settings } from "../types";
 import VoteChart from "../components/charts/VoteChart";
 import { Trophy, Users, BarChart3, Eye, EyeOff, Clock3 } from "lucide-react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 
 export default function Dashboard() {
   const [candidates, setCandidates] = useState<Candidate[]>([]);
@@ -17,7 +25,6 @@ export default function Dashboard() {
           API.get("/candidates"),
           API.get("/settings"),
         ]);
-
         setCandidates(candidateRes.data);
         setSettings(settingsRes.data);
       } catch (error) {
@@ -26,13 +33,13 @@ export default function Dashboard() {
         setLoading(false);
       }
     }
-
     fetchData();
   }, []);
 
-  const totalVotes = useMemo(() => {
-    return candidates.reduce((sum, candidate) => sum + candidate.votes, 0);
-  }, [candidates]);
+  const totalVotes = useMemo(
+    () => candidates.reduce((sum, c) => sum + c.votes, 0),
+    [candidates],
+  );
 
   const topCandidate = useMemo(() => {
     if (candidates.length === 0) return null;
@@ -40,14 +47,10 @@ export default function Dashboard() {
   }, [candidates]);
 
   const votingStatus = useMemo(() => {
-    if (!settings?.votingStart || !settings?.votingEnd) {
-      return "Not configured";
-    }
-
+    if (!settings?.votingStart || !settings?.votingEnd) return "Not configured";
     const now = new Date();
     const start = new Date(settings.votingStart);
     const end = new Date(settings.votingEnd);
-
     if (now < start) return "Not started";
     if (now > end) return "Ended";
     return "Active";
@@ -57,9 +60,11 @@ export default function Dashboard() {
     return (
       <DashboardLayout>
         <div className="mx-auto max-w-7xl">
-          <div className="rounded-3xl border border-slate-200 bg-white p-10 text-center shadow-sm">
-            <p className="text-slate-600">Loading dashboard...</p>
-          </div>
+          <Card>
+            <CardContent className="p-10 text-center">
+              <p className="text-muted-foreground">Loading dashboard...</p>
+            </CardContent>
+          </Card>
         </div>
       </DashboardLayout>
     );
@@ -67,262 +72,236 @@ export default function Dashboard() {
 
   return (
     <DashboardLayout>
-      <div className="mx-auto max-w-7xl">
-        <div className="mb-8 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+      <div className="mx-auto max-w-7xl space-y-6">
+        {/* Header */}
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="text-sm font-medium uppercase tracking-[0.2em] text-blue-600">
+            <p className="text-sm font-semibold uppercase tracking-widest text-primary">
               Admin Overview
             </p>
-            <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
+            <h1 className="mt-1 text-3xl font-semibold tracking-tight">
               Dashboard
             </h1>
-            <p className="mt-2 text-sm text-slate-500">
-              Monitor candidates, vote activity, and system settings from one
-              place.
+            <p className="mt-1 text-sm text-muted-foreground">
+              Monitor candidates, vote activity, and system settings.
             </p>
           </div>
-
-          <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
-            <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
-              Voting Status
-            </p>
-            <p
-              className={`mt-1 text-lg font-bold ${
-                votingStatus === "Active"
-                  ? "text-green-600"
-                  : votingStatus === "Ended"
-                    ? "text-red-600"
-                    : "text-amber-600"
-              }`}
-            >
-              {votingStatus}
-            </p>
-          </div>
+          <Badge
+            variant={
+              votingStatus === "Active"
+                ? "default"
+                : votingStatus === "Ended"
+                  ? "destructive"
+                  : "secondary"
+            }
+            className="w-fit text-sm"
+          >
+            {votingStatus}
+          </Badge>
         </div>
 
-        <div className="mb-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm transition hover:shadow-md">
-            <div className="flex items-center justify-between">
+        {/* Stat cards */}
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <Card>
+            <CardContent className="flex items-center justify-between p-5">
               <div>
-                <p className="text-sm font-medium text-slate-500">
+                <p className="text-sm font-medium text-muted-foreground">
                   Total Candidates
                 </p>
-                <h2 className="mt-2 text-3xl font-bold text-slate-900">
-                  {candidates.length}
-                </h2>
+                <p className="mt-1 text-3xl font-semibold">{candidates.length}</p>
               </div>
-              <div className="rounded-2xl bg-blue-50 p-3 text-blue-600">
-                <Users size={22} />
+              <div className="rounded-xl bg-blue-50 p-3 text-blue-600">
+                <Users size={20} />
               </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
 
-          <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm transition hover:shadow-md">
-            <div className="flex items-center justify-between">
+          <Card>
+            <CardContent className="flex items-center justify-between p-5">
               <div>
-                <p className="text-sm font-medium text-slate-500">
+                <p className="text-sm font-medium text-muted-foreground">
                   Total Votes
                 </p>
-                <h2 className="mt-2 text-3xl font-bold text-slate-900">
-                  {totalVotes}
-                </h2>
+                <p className="mt-1 text-3xl font-semibold">{totalVotes}</p>
               </div>
-              <div className="rounded-2xl bg-emerald-50 p-3 text-emerald-600">
-                <BarChart3 size={22} />
+              <div className="rounded-xl bg-emerald-50 p-3 text-emerald-600">
+                <BarChart3 size={20} />
               </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
 
-          <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm transition hover:shadow-md">
-            <div className="flex items-center justify-between">
+          <Card>
+            <CardContent className="flex items-center justify-between p-5">
               <div>
-                <p className="text-sm font-medium text-slate-500">
+                <p className="text-sm font-medium text-muted-foreground">
                   Vote Visibility
                 </p>
-                <h2 className="mt-2 text-2xl font-bold text-slate-900">
+                <p className="mt-1 text-2xl font-semibold">
                   {settings?.candidateCanViewVotes ? "Visible" : "Hidden"}
-                </h2>
+                </p>
               </div>
-              <div className="rounded-2xl bg-violet-50 p-3 text-violet-600">
+              <div className="rounded-xl bg-violet-50 p-3 text-violet-600">
                 {settings?.candidateCanViewVotes ? (
-                  <Eye size={22} />
+                  <Eye size={20} />
                 ) : (
-                  <EyeOff size={22} />
+                  <EyeOff size={20} />
                 )}
               </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
 
-          <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm transition hover:shadow-md">
-            <div className="flex items-center justify-between">
+          <Card>
+            <CardContent className="flex items-center justify-between p-5">
               <div>
-                <p className="text-sm font-medium text-slate-500">
+                <p className="text-sm font-medium text-muted-foreground">
                   Top Candidate
                 </p>
-                <h2 className="mt-2 text-xl font-bold text-slate-900">
+                <p className="mt-1 text-xl font-semibold">
                   {topCandidate ? topCandidate.name : "N/A"}
-                </h2>
-              </div>
-              <div className="rounded-2xl bg-amber-50 p-3 text-amber-600">
-                <Trophy size={22} />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="mb-8 grid gap-6 lg:grid-cols-3">
-          <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm lg:col-span-2">
-            <div className="mb-5 flex items-center justify-between">
-              <div>
-                <h2 className="text-2xl font-bold tracking-tight text-slate-900">
-                  Performance Overview
-                </h2>
-                <p className="mt-1 text-sm text-slate-500">
-                  Vote movement for the leading candidate.
                 </p>
               </div>
+              <div className="rounded-xl bg-amber-50 p-3 text-amber-600">
+                <Trophy size={20} />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
-              {topCandidate && (
-                <div className="rounded-full bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700">
-                  {topCandidate.name}
+        {/* Chart + sidebar */}
+        <div className="grid gap-6 lg:grid-cols-3">
+          <Card className="lg:col-span-2">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Performance Overview</CardTitle>
+                  <CardDescription>
+                    Vote movement for the leading candidate.
+                  </CardDescription>
+                </div>
+                {topCandidate && (
+                  <Badge variant="secondary">{topCandidate.name}</Badge>
+                )}
+              </div>
+            </CardHeader>
+            <CardContent>
+              {topCandidate ? (
+                <VoteChart data={topCandidate.voteHistory} />
+              ) : (
+                <div className="rounded-lg bg-muted p-8 text-center text-muted-foreground">
+                  No chart data available yet.
                 </div>
               )}
-            </div>
-
-            {topCandidate ? (
-              <VoteChart data={topCandidate.voteHistory} />
-            ) : (
-              <div className="rounded-2xl bg-slate-50 p-8 text-center">
-                <p className="text-slate-500">No chart data available yet.</p>
-              </div>
-            )}
-          </div>
+            </CardContent>
+          </Card>
 
           <div className="space-y-6">
-            <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-              <div className="mb-4 flex items-center gap-3">
-                <div className="rounded-2xl bg-slate-100 p-3 text-slate-700">
-                  <Clock3 size={20} />
+            <Card>
+              <CardHeader className="flex flex-row items-center gap-3 space-y-0">
+                <div className="rounded-lg bg-muted p-2">
+                  <Clock3 size={18} />
                 </div>
                 <div>
-                  <h2 className="text-lg font-bold text-slate-900">
-                    Voting Timeline
-                  </h2>
-                  <p className="text-sm text-slate-500">
-                    Current schedule for this election.
-                  </p>
+                  <CardTitle className="text-base">Voting Timeline</CardTitle>
+                  <CardDescription>Current schedule.</CardDescription>
                 </div>
-              </div>
-
-              <div className="space-y-4">
-                <div className="rounded-2xl bg-slate-50 p-4">
-                  <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
-                    Start Time
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="rounded-lg bg-muted p-3">
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    Start
                   </p>
-                  <p className="mt-2 text-sm font-semibold text-slate-900">
+                  <p className="mt-1 text-sm font-semibold">
                     {settings?.votingStart
                       ? new Date(settings.votingStart).toLocaleString()
                       : "Not set"}
                   </p>
                 </div>
-
-                <div className="rounded-2xl bg-slate-50 p-4">
-                  <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
-                    End Time
+                <div className="rounded-lg bg-muted p-3">
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    End
                   </p>
-                  <p className="mt-2 text-sm font-semibold text-slate-900">
+                  <p className="mt-1 text-sm font-semibold">
                     {settings?.votingEnd
                       ? new Date(settings.votingEnd).toLocaleString()
                       : "Not set"}
                   </p>
                 </div>
-              </div>
-            </div>
+              </CardContent>
+            </Card>
 
-            <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-              <h2 className="text-lg font-bold text-slate-900">
-                Quick Summary
-              </h2>
-
-              <div className="mt-4 space-y-4">
-                <div className="flex items-center justify-between rounded-2xl bg-slate-50 px-4 py-3">
-                  <span className="text-sm text-slate-500">Candidates</span>
-                  <span className="text-sm font-bold text-slate-900">
-                    {candidates.length}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Quick Summary</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex items-center justify-between rounded-lg bg-muted px-3 py-2">
+                  <span className="text-sm text-muted-foreground">
+                    Candidates
                   </span>
+                  <span className="text-sm font-semibold">{candidates.length}</span>
                 </div>
-
-                <div className="flex items-center justify-between rounded-2xl bg-slate-50 px-4 py-3">
-                  <span className="text-sm text-slate-500">Votes Counted</span>
-                  <span className="text-sm font-bold text-slate-900">
-                    {totalVotes}
+                <div className="flex items-center justify-between rounded-lg bg-muted px-3 py-2">
+                  <span className="text-sm text-muted-foreground">
+                    Votes Counted
                   </span>
+                  <span className="text-sm font-semibold">{totalVotes}</span>
                 </div>
-
-                <div className="flex items-center justify-between rounded-2xl bg-slate-50 px-4 py-3">
-                  <span className="text-sm text-slate-500">Visibility</span>
-                  <span className="text-sm font-bold text-slate-900">
+                <div className="flex items-center justify-between rounded-lg bg-muted px-3 py-2">
+                  <span className="text-sm text-muted-foreground">
+                    Visibility
+                  </span>
+                  <span className="text-sm font-semibold">
                     {settings?.candidateCanViewVotes ? "On" : "Off"}
                   </span>
                 </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
+        {/* Rankings */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Candidate Rankings</CardTitle>
+            <CardDescription>Sorted by current vote count.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {candidates.length === 0 ? (
+              <div className="rounded-lg bg-muted p-8 text-center text-muted-foreground">
+                No candidates available yet.
               </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-          <div className="mb-5 flex items-center justify-between">
-            <div>
-              <h2 className="text-2xl font-bold tracking-tight text-slate-900">
-                Candidate Rankings
-              </h2>
-              <p className="mt-1 text-sm text-slate-500">
-                Sorted by current vote count.
-              </p>
-            </div>
-          </div>
-
-          {candidates.length === 0 ? (
-            <div className="rounded-2xl bg-slate-50 p-8 text-center">
-              <p className="text-slate-500">No candidates available yet.</p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {[...candidates]
-                .sort((a, b) => b.votes - a.votes)
-                .map((candidate, index) => (
-                  <div
-                    key={candidate._id}
-                    className="flex flex-col gap-4 rounded-2xl border border-slate-200 p-4 sm:flex-row sm:items-center sm:justify-between"
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-100 text-sm font-bold text-slate-700">
-                        #{index + 1}
+            ) : (
+              <div className="space-y-3">
+                {[...candidates]
+                  .sort((a, b) => b.votes - a.votes)
+                  .map((candidate, index) => (
+                    <div
+                      key={candidate._id}
+                      className="flex flex-col gap-3 rounded-lg border p-4 sm:flex-row sm:items-center sm:justify-between"
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted text-sm font-semibold">
+                          #{index + 1}
+                        </div>
+                        <div>
+                          <p className="font-semibold">{candidate.name}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {candidate.category} &middot; {candidate.department}
+                          </p>
+                        </div>
                       </div>
-
-                      <div>
-                        <h3 className="font-semibold text-slate-900">
-                          {candidate.name}
-                        </h3>
-                        <p className="text-sm text-slate-500">
-                          {candidate.category} • {candidate.department}
+                      <div className="text-left sm:text-right">
+                        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                          Votes
                         </p>
+                        <p className="text-xl font-semibold">{candidate.votes}</p>
                       </div>
                     </div>
-
-                    <div className="text-left sm:text-right">
-                      <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
-                        Votes
-                      </p>
-                      <p className="text-xl font-bold text-slate-900">
-                        {candidate.votes}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-            </div>
-          )}
-        </div>
+                  ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </DashboardLayout>
   );

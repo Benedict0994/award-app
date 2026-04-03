@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx shadcn@latest add card badge input label textarea accordion separator avatar dropdown-menu sheet dialog switch select tabs table tooltip navigation-menu --overwrite)"
+    ]
+  }
+}
