@@ -7,6 +7,8 @@ import Settings from "../models/Settings";
 import { generateToken } from "../utils/generateToken";
 import { sendEmail } from "../utils/sendEmail";
 import { sendTemplateEmail } from "../utils/sendEmailTemplate";
+import { generateSlug } from "../utils/generateSlug";
+import { generateOTP } from "../utils/generateOTP";
 
 function getSingleString(value: unknown): string | null {
   if (typeof value === "string" && value.trim()) {
@@ -28,17 +30,23 @@ function getSingleString(value: unknown): string | null {
 export async function signup(req: Request, res: Response) {
   try {
     const name = getSingleString(req.body.name);
-    const email = getSingleString(req.body.email)?.toLowerCase();
+    const rawEmail = getSingleString(req.body.email);
     const password = getSingleString(req.body.password);
     const awardName = getSingleString(req.body.awardName);
-    const awardSlug = getSingleString(req.body.awardSlug);
+   
 
-    if (!name || !email || !password || !awardName || !awardSlug) {
+    console.log(req.body.name);
+    // Convert email to lowercase after validation
+    const email = rawEmail ? rawEmail.toLowerCase() : null;
+
+    if (!name || !email || !password || !awardName) {
       return res.status(400).json({ message: "All fields are required" });
     }
 
+    // Generate slug from award name
+    const awardSlug = generateSlug(awardName);
+
     const existingAdmin = await Admin.findOne({ email });
-    console.log(existingAdmin)
 
     if (existingAdmin) {
       return res.status(400).json({ message: "Admin already exists" });
@@ -63,18 +71,73 @@ export async function signup(req: Request, res: Response) {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    // Generate OTP (5 digits)
+    const otp = generateOTP();
+    const otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
     const admin = await Admin.create({
       name,
       email,
       password: hashedPassword,
-      isVerified: true,
+      isVerified: false,
+      otp,
+      otpExpires,
       awardSpace: awardSpace._id,
     });
 
-    console.log("admin", admin
+    // Send OTP email
+    const emailObject = {
+      templateName: "otp" as const,
+      templateProps: { otp },
+      subject: "Verify Your Email - AwardVote",
+      to: email,
+    };
+    await sendTemplateEmail(emailObject);
 
-    )
+    return res.status(201).json({
+      message: "Signup successful. OTP sent to your email.",
+      adminId: admin._id,
+      email: admin.email,
+      requiresVerification: true,
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: "Signup failed" });
+  }
+}
 
+export async function verifyOTP(req: Request, res: Response) {
+  try {
+    const adminId = getSingleString(req.body.adminId);
+    const otp = getSingleString(req.body.otp);
+
+    if (!adminId || !otp) {
+      return res.status(400).json({ message: "Admin ID and OTP are required" });
+    }
+
+    const admin = await Admin.findById(adminId);
+
+    if (!admin) {
+      return res.status(404).json({ message: "Admin not found" });
+    }
+
+    // Check if OTP is expired
+    if (!admin.otpExpires || new Date() > admin.otpExpires) {
+      return res.status(400).json({ message: "OTP has expired" });
+    }
+
+    // Check if OTP matches
+    if (admin.otp !== otp) {
+      return res.status(400).json({ message: "Invalid OTP" });
+    }
+
+    // Mark as verified and remove OTP
+    admin.isVerified = true;
+    admin.otp = undefined;
+    admin.otpExpires = undefined;
+    await admin.save();
+
+    // Generate token for login
     const token = generateToken({
       id: String(admin._id),
       email: admin.email,
@@ -82,17 +145,8 @@ export async function signup(req: Request, res: Response) {
       awardSpace: String(admin.awardSpace),
     });
 
-      const object = {
-      templateName:"otp",
-      templateProps:{otp: token},
-      subject:"Email Verification Token",
-      to: email
-    };
-    await sendTemplateEmail(object);
-
-
-    return res.status(201).json({
-      message: "Signup successful",
+    return res.status(200).json({
+      message: "Email verified successfully",
       token,
       user: {
         id: admin._id,
@@ -103,14 +157,61 @@ export async function signup(req: Request, res: Response) {
     });
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ message: "Signup failed" });
+    return res.status(500).json({ message: "OTP verification failed" });
+  }
+}
+
+export async function resendOTP(req: Request, res: Response) {
+  try {
+    const adminId = getSingleString(req.body.adminId);
+
+    if (!adminId) {
+      return res.status(400).json({ message: "Admin ID is required" });
+    }
+
+    const admin = await Admin.findById(adminId);
+
+    if (!admin) {
+      return res.status(404).json({ message: "Admin not found" });
+    }
+
+    if (admin.isVerified) {
+      return res.status(400).json({ message: "Account is already verified" });
+    }
+
+    // Generate new OTP
+    const otp = generateOTP();
+    const otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+    admin.otp = otp;
+    admin.otpExpires = otpExpires;
+    await admin.save();
+
+    // Send OTP email
+    const emailObject = {
+      templateName: "otp" as const,
+      templateProps: { otp },
+      subject: "Verify Your Email - AwardVote",
+      to: admin.email,
+    };
+    await sendTemplateEmail(emailObject);
+
+    return res.status(200).json({
+      message: "OTP resent to your email",
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: "Failed to resend OTP" });
   }
 }
 
 export async function login(req: Request, res: Response) {
   try {
-    const email = getSingleString(req.body.email)?.toLowerCase();
+    const rawEmail = getSingleString(req.body.email);
     const password = getSingleString(req.body.password);
+
+    // Convert email to lowercase after validation
+    const email = rawEmail ? rawEmail.toLowerCase() : null;
 
     if (!email || !password) {
       return res
@@ -165,7 +266,10 @@ export async function login(req: Request, res: Response) {
 
 export async function forgotPassword(req: Request, res: Response) {
   try {
-    const email = getSingleString(req.body.email)?.toLowerCase();
+    const rawEmail = getSingleString(req.body.email);
+
+    // Convert email to lowercase after validation
+    const email = rawEmail ? rawEmail.toLowerCase() : null;
 
     if (!email) {
       return res.status(400).json({ message: "Email is required" });

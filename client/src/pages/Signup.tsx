@@ -1,23 +1,20 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import toast from "react-hot-toast";
-import { User, Mail, LockKeyhole, Trophy, Link2, Vote } from "lucide-react";
+import { User, Mail, LockKeyhole, Trophy, Vote } from "lucide-react";
 import API from "../services/api";
-import useAuth from "../context/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 export default function Signup() {
   const navigate = useNavigate();
-  const { loginUser } = useAuth();
 
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     password: "",
     awardName: "",
-    awardSlug: "",
   });
   const [loading, setLoading] = useState(false);
 
@@ -27,16 +24,45 @@ export default function Signup() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+
+    // Client-side validation
+    if (!formData.name.trim()) {
+      toast.error("Full name is required");
+      return;
+    }
+    if (!formData.email.trim()) {
+      toast.error("Email is required");
+      return;
+    }
+    if (!formData.password.trim()) {
+      toast.error("Password is required");
+      return;
+    }
+    if (formData.password.length < 8) {
+      toast.error("Password must be at least 8 characters");
+      return;
+    }
+    if (!formData.awardName.trim()) {
+      toast.error("Award name is required");
+      return;
+    }
+
     setLoading(true);
 
     try {
+      console.log("Sending form data:", formData);
       const res = await API.post("/auth/signup", formData);
-      loginUser(res.data.user, res.data.token);
-      toast.success("Signup successful");
-      navigate("/dashboard");
-    } catch (error) {
+      toast.success("Signup successful! Please verify your email.");
+      // Redirect to verification page with adminId and email
+      navigate("/verify-email", {
+        state: {
+          adminId: res.data.adminId,
+          email: res.data.email,
+        },
+      });
+    } catch (error: any) {
       console.error(error);
-      toast.error("Signup failed");
+      toast.error(error.response?.data?.message || "Signup failed");
     } finally {
       setLoading(false);
     }
@@ -79,6 +105,7 @@ export default function Signup() {
                   className="h-11 rounded-xl border-border bg-white pl-10"
                   value={formData.name}
                   onChange={handleChange}
+                  required
                 />
               </div>
             </div>
@@ -100,6 +127,7 @@ export default function Signup() {
                   className="h-11 rounded-xl border-border bg-white pl-10"
                   value={formData.email}
                   onChange={handleChange}
+                  required
                 />
               </div>
             </div>
@@ -121,6 +149,8 @@ export default function Signup() {
                   className="h-11 rounded-xl border-border bg-white pl-10"
                   value={formData.password}
                   onChange={handleChange}
+                  required
+                  minLength={8}
                 />
               </div>
             </div>
@@ -141,26 +171,7 @@ export default function Signup() {
                   className="h-11 rounded-xl border-border bg-white pl-10"
                   value={formData.awardName}
                   onChange={handleChange}
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="awardSlug" className="text-sm text-foreground">
-                Award Slug
-              </Label>
-              <div className="relative">
-                <Link2
-                  size={16}
-                  className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground"
-                />
-                <Input
-                  id="awardSlug"
-                  name="awardSlug"
-                  placeholder="e.g. best-employee-awards"
-                  className="h-11 rounded-xl border-border bg-white pl-10"
-                  value={formData.awardSlug}
-                  onChange={handleChange}
+                  required
                 />
               </div>
             </div>
