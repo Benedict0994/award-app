@@ -5,6 +5,8 @@ import Admin from "../models/Admin";
 import AwardSpace from "../models/AwardSpace";
 import Settings from "../models/Settings";
 import { generateToken } from "../utils/generateToken";
+import { sendEmail } from "../utils/sendEmail";
+import { sendTemplateEmail } from "../utils/sendEmailTemplate";
 
 function getSingleString(value: unknown): string | null {
   if (typeof value === "string" && value.trim()) {
@@ -80,6 +82,15 @@ export async function signup(req: Request, res: Response) {
       awardSpace: String(admin.awardSpace),
     });
 
+      const object = {
+      templateName:"otp",
+      templateProps:{otp: token},
+      subject:"Email Verification Token",
+      to: email
+    };
+    await sendTemplateEmail(object);
+
+
     return res.status(201).json({
       message: "Signup successful",
       token,
@@ -107,6 +118,13 @@ export async function login(req: Request, res: Response) {
         .json({ message: "Email and password are required" });
     }
 
+    //send email
+    // templateName: "ContactUsEmail",
+  // templateProps: { name: "Jane", message: "Hello!" },
+  // subject: "New Contact Form Submission",
+  // to: "admin@example.com",
+
+ 
     const admin = await Admin.findOne({ email });
 
     if (!admin) {

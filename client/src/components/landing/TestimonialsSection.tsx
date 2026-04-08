@@ -6,7 +6,7 @@ const testimonials = [
   {
     quote:
       "This platform transformed how we run our annual awards. The dashboard is intuitive and the public voting pages are beautiful.",
-    name: "Sarah Johnson",
+    name: "Benedict Asumadu Nkrumah",
     role: "Event Director",
     org: "University Awards Committee",
     initials: "SJ",
@@ -14,9 +14,9 @@ const testimonials = [
   {
     quote:
       "Setting up our corporate recognition program was a breeze. The real-time vote tracking keeps everyone engaged throughout the process.",
-    name: "Michael Chen",
+    name: "MaCARTHUR Kelvin",
     role: "HR Manager",
-    org: "TechCorp Industries",
+    org: "Tech Industries",
     initials: "MC",
   },
   {
